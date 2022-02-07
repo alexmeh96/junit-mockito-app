@@ -9,8 +9,8 @@ import org.junit.jupiter.api.extension.ExtendWith;
 import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.Arguments;
 import org.junit.jupiter.params.provider.MethodSource;
-import org.mockito.ArgumentCaptor;
-import org.mockito.Mockito;
+import org.mockito.*;
+import org.mockito.junit.jupiter.MockitoExtension;
 
 import java.time.Duration;
 import java.util.Map;
@@ -32,14 +32,24 @@ import static org.junit.jupiter.api.Assertions.*;
 // предназначен для внедрения в тестовый класс собственного функционала (внедрение зависимосте, изменение жизненного цикла тестов и тд)
 // в основном в место него используется штуки из spring test framework
 @ExtendWith({
-        UserServiceParamResolver.class
+        UserServiceParamResolver.class,
+        MockitoExtension.class
 })
 public class UserServiceTest {
 
     public static final User IVAN = User.of(1, "Ivan", "123");
     public static final User PETR = User.of(2, "Petr", "111");
 
+    @Captor  //  следит за переданными аргументами в вызове метода мок объекта
+    private ArgumentCaptor<Integer> argumentCaptor;
+
+    //  создать mock обьект userDao  (наследуется от класса UserDao и переопределяет его методы (преподчтительно использовать!) )
+    @Mock
+    //  создать spy обьект userDao  ( создаёт прокси вокруг обьекта UserDao )
+//    @Spy
     private UserDao userDao;
+
+    @InjectMocks  //  заинджектить mock и spy обьекты в userService
     private UserService userService;
 
     @BeforeAll
@@ -57,14 +67,15 @@ public class UserServiceTest {
     @BeforeEach
     void prepare() {
         System.out.println("Before each: " + this);
-        this.userDao = Mockito.mock(UserDao.class);  //  наследуется от класса UserDao и переопределяет его методы (преподчтительно использовать!)
-//        this.userDao = Mockito.spy(new UserDao());  //  создаёт прокси вокруг обьекта UserDao
-        this.userService = new UserService(userDao);
+//        this.userDao = Mockito.mock(UserDao.class);  //  можно использовать вместо @Mock
+//        this.userDao = Mockito.spy(new UserDao());  //  можно использовать вместо @Spy
+//        this.userService = new UserService(userDao);   //  можно использовать вместо @InjectMocks
     }
 
     @Test
     void shouldDeleteExistedUser() {
         userService.add(IVAN);
+
         // верни true, когда мы вызовем у обьекта userDao метод delete и передадим ему IVAN.getId()
         // может применяться только для mock-объектов
         Mockito.doReturn(true).when(userDao).delete(IVAN.getId());
@@ -84,7 +95,7 @@ public class UserServiceTest {
         Mockito.verify(userDao, Mockito.times(3)).delete(IVAN.getId());
 
         //проверка что метод delete у обьекта userDao был вызван с переданным ему Id равным 1
-        var argumentCaptor = ArgumentCaptor.forClass(Integer.class);
+//        var argumentCaptor = ArgumentCaptor.forClass(Integer.class);  //  можно использовать вместо @Captor
         Mockito.verify(userDao, Mockito.times(3)).delete(argumentCaptor.capture());
         assertThat(argumentCaptor.getValue()).isEqualTo(1);
 
